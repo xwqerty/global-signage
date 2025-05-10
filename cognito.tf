@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = var.aws_region # Specify your desired AWS region
 }
 
 variable "aws_region" {
@@ -95,7 +95,7 @@ resource "aws_cognito_user_pool" "ad_platform_user_pool" {
 
   # Lambda triggers (can be added later for custom workflows)
   # lambda_config {
-  #   post_confirmation = aws_lambda_function.my_post_confirmation_lambda.arn 
+  #   post_confirmation = aws_lambda_function.my_post_confirmation_lambda.arn
   # }
 
   tags = {
@@ -119,29 +119,28 @@ resource "aws_cognito_user_pool_client" "ad_platform_app_client" {
 
   generate_secret = false # For web/SPA clients, set to false. Set to true for confidential clients (server-side).
 
-  # Token validity periods (customize as needed)
-  access_token_validity  = 60 # minutes
-  id_token_validity      = 60 # minutes
-  refresh_token_validity = 30 # days
+  # Token validity periods
+  # The following two lines are commented out to rely on the AWS provider defaults (60 minutes for both)
+  # due to an issue where explicitly setting '60' was misinterpreted as 60 hours.
+  # access_token_validity  = 60 # minutes
+  # id_token_validity      = 60 # minutes
+  refresh_token_validity = 30 # days (This is in days and the numeric value is usually fine)
 
   supported_identity_providers = var.supported_identity_providers
 
   # Allowed OAuth flows and scopes (for federation, if you add social IdPs or an Authorization Server)
+  # Note: If you enable these, you MUST provide valid callback_urls and logout_urls.
   # allowed_oauth_flows_user_pool_client = true
-  # allowed_oauth_flows                  = ["code", "implicit"]
+  # allowed_oauth_flows                  = ["code", "implicit"] # or just ["code"] for more secure server-side flow
   # allowed_oauth_scopes                 = ["phone", "email", "openid", "profile", "aws.cognito.signin.user.admin"]
-  # callback_urls                        = ["https://myapp.com/callback"] # Replace with your app's callback URL(s)
-  # logout_urls                          = ["https://myapp.com/logout"]   # Replace with your app's logout URL(s)
+  # callback_urls                        = ["http://localhost:3000/callback"] # Replace with your actual app's callback URL(s)
+  # logout_urls                          = ["http://localhost:3000/logout"]   # Replace with your actual app's logout URL(s)
 
   prevent_user_existence_errors = "ENABLED" # Recommended for security
 
   depends_on = [aws_cognito_user_pool.ad_platform_user_pool]
 
-  tags = {
-    Environment = "dev"
-    Project     = "GlobalAdPlatform"
-    ManagedBy   = "Terraform"
-  }
+  # The 'tags' block was removed from this resource as it's not supported here.
 }
 
 # Outputs
