@@ -47,10 +47,100 @@ function ensureAuthenticated(req, res, next) {
 }
 
 const layout = (title, body, req) => `
-  <h1><a href="/">Home</a></h1>
-    ${req.session.cognitoAuthResult && req.session.cognitoAuthResult.AuthenticationResult ? '<a href="/logout">Logout</a>' : '<a href="/login">Login</a> <a href="/signup">Sign Up</a>'}
-    <h2>${title}</h2>
-${body}
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+      body {
+        margin: 0;
+        height: 100vh;
+        background: linear-gradient(135deg, #4facfe, #00f2fe, #b93bff, #e100ff);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: Arial, sans-serif;
+      }
+      .login-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        text-align: center;
+        width: 300px;
+      }
+      .login-container h2 {
+        margin-bottom: 20px;
+      }
+      .login-container input {
+        width: 80%;
+        padding: 12px;
+        margin: 10px auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        display: block;
+      }
+      .login-container button {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        background: linear-gradient(90deg, #4facfe, #e100ff);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+      .login-container button:hover {
+        background: linear-gradient(90deg, #00f2fe, #b93bff);
+      }
+      .login-container a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      .logout-button {
+        margin-top: 10px;
+        padding: 12px;
+        background: linear-gradient(90deg, #ff6347, #ff4500);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.3s ease, transform 0.2s ease;
+      }
+      .logout-button:hover {
+        background: linear-gradient(90deg, #ff7f50, #ff4040);
+        transform: scale(1.05);
+      }
+      .upload-button {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        background: linear-gradient(90deg, #32cd32, #228b22);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        transition: background 0.3s ease, transform 0.2s ease;
+      }
+      .upload-button:hover {
+        background: linear-gradient(90deg, #3cb371, #2e8b57);
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <h2>${title}</h2>
+      ${body}
+      ${req.session.cognitoAuthResult && req.session.cognitoAuthResult.AuthenticationResult ? '<a href="/logout" class="logout-button">Logout</a>' : ''}
+    </div>
+  </body>
+  </html>
 `;
 
 app.get('/', ensureAuthenticated, async (req, res) => {
@@ -84,7 +174,7 @@ app.get('/', ensureAuthenticated, async (req, res) => {
         ${req.session.uploadError ? `<p style="color: red;">${req.session.uploadError}</p>` : ''}
         <form action="/upload" method="post" enctype="multipart/form-data">
             <input type="file" name="file" />
-            <input type="submit" value="Upload" />
+            <input type="submit" value="Upload" class="upload-button" />
         </form>
         <p>Canonical Username (sub): ${subDisplay}</p>
         <p>Email (alias): ${emailDisplay}</p>
@@ -101,6 +191,13 @@ app.post('/upload', ensureAuthenticated, upload.single('file'), async (req, res)
         return res.redirect('/');
     }
 
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
+
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        req.session.uploadError = 'Invalid file type. Only JPG, PNG, GIF, and MP4 files are allowed.';
+        return res.redirect('/');
+    }
+
     const subAttr = req.session.userAttributes.find(attr => attr.Name === 'sub');
     const sub = subAttr ? subAttr.Value : null;
     if (!sub) {
@@ -109,7 +206,7 @@ app.post('/upload', ensureAuthenticated, upload.single('file'), async (req, res)
     }
 
     const params = {
-        Bucket: 'your-s3-bucket-name', // Replace with your S3 bucket name
+        Bucket: 'global-signage-advertisement-bucket',
         Key: `${sub}/${req.file.originalname}`,
         Body: req.file.buffer,
         ContentType: req.file.mimetype,
@@ -132,13 +229,14 @@ app.get('/login', (req, res) => {
     const error = req.session.loginError; delete req.session.loginError;
     const body = `${error ? `<p style="color: red;">${error}</p>` : ''}
         <form action="/login" method="post">
-            <label>Email or Preferred Username:</label><br>
-            <input type="text" name="identifier" /><br>
-            <label>Password:</label><br>
-            <input type="password" name="password" /><br>
-            <input type="submit" value="Login" />
+            <label>Username</label><br>
+            <input type="text" name="identifier" placeholder="Type your username" /><br>
+            <label>Password</label><br>
+            <input type="password" name="password" placeholder="Type your password" /><br>
+            <a href="/forgot-password">Forgot password?</a><br>
+            <button type="submit">LOGIN</button>
         </form>
-        <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+        <p>Or <a href="/signup">SIGN UP</a></p>
     `;
     res.send(layout('Login', body, req));
 });
