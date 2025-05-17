@@ -1,10 +1,6 @@
-provider "aws" {
-  region = "us-east-1"  # Set to the same region as your Cognito User Pool
-}
-
 variable "bucket_name" {
   description = "The unique name for the S3 bucket"
-  default     = "my-unique-bucket-name"  # Replace with your desired bucket name
+  default     = "global-signage-advertisement-bucket"  # Replace with your desired bucket name
 }
 
 # Create the S3 bucket
